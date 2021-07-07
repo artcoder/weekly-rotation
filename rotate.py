@@ -11,17 +11,18 @@ import datetime
 import operator
 import pickle
 from datetime import timedelta
+import sys
 
 import pandas as pd
 import pandas_ta as ta
 import yfinance as yf
 
-
-finish = datetime.datetime(2021, 7, 6)
+# today's date with zeroed out time
+finish = datetime.datetime.combine(datetime.datetime.today(), datetime.datetime.min.time())
+#finish = datetime.datetime(2021, 7, 6)
 start = finish - timedelta(days=289)
 print("start:", start, " finish: ", finish)
 
-# finish = datetime.today()
 # start = finish - timedelta(days=289)
 
 # 253 trading days in a year
@@ -113,22 +114,27 @@ for d in start_day_range:
     if d in trading_days:
         start = d
         found_start_day = True
+        break
 
 if found_start_day == False:
     print('Could not find a trading day for the start day.')
+    sys.exit(1)
 
 
 finish_day_range = pd.date_range(finish - timedelta(days=extra_days),
                                  finish).tolist()
+finish_day_range.reverse()
 found_finish_day = False
 
 for d in finish_day_range:
     if d in trading_days:
         finish = d
         found_finish_day = True
+        break
 
 if found_finish_day == False:
     print('Could not find a trading day for the finish day.')
+    sys.exit(1)
 
 print("start:", start, " finish: ", finish)
 
