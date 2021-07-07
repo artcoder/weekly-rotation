@@ -16,7 +16,7 @@ import pandas as pd
 import pandas_ta as ta
 import yfinance as yf
 
-extra_days = 5  # extra days to try to download in case the start date is not a trading day
+
 finish = datetime.datetime(2021, 7, 6)
 start = finish - timedelta(days=289)
 print("start:", start, " finish: ", finish)
@@ -36,10 +36,14 @@ symbols_filename = 'C:\Data\code\sp500symbols.csv'
 
 pickle_filename = 'C:\Data\code\stock_df.pkl'
 
+extra_days = 5  # extra days to try to download in case the start date is not a trading day
+
 # create empty dataframe
 stock_df = pd.DataFrame()
 
 
+# Using yfinance, download stock data on the stock symbols in symbols_filename
+#  over the period start to end to the dataframe stock_df
 def load_stock_data():
 
     global stock_df
@@ -75,27 +79,25 @@ def load_stock_data():
             print("Could not download " + stock_symbol)
 ###
 
+
+# if pickle_file_needs_to_be_updated:
+#load_stock_data()
+#stock_df.to_pickle(pickle_filename)
+# else
 pickle_file = open(pickle_filename, 'rb')
 stock_df = pickle.load(pickle_file)
 
-# if loading_pickle_file_fails:
-#load_stock_data()
-#stock_df.to_pickle(pickle_filename)
 
 stock_df = stock_df.reset_index()
-# Just need "Adj Close", and "Volume"
+# Just need "Adj Close", and "Volume", so drop the other columns
 stock_df = stock_df.drop(columns=['Open', 'High', 'Low', 'Close'])
 stock_df = stock_df.set_index(['Name', 'Date'])
 stock_df = stock_df.sort_index()
 #print(stock_df)
 
-temp_df = stock_df.reset_index()
-stocks = temp_df['Name'].unique()
-# print(stocks)
-
 
 # Correct start and finish dates so they are trading days
-trading_days = stock_df.loc[stocks[0]].index
+trading_days = stock_df.loc[stocks[0]].index  # "Date" is part of the MultiIndex
 
 start_day_range = pd.date_range(start - timedelta(days=extra_days),
                                 start).tolist()
@@ -125,30 +127,25 @@ if found_finish_day == False:
 
 print("start:", start, " finish: ", finish)
 
-ROC = {}
-RSI = {}
+
+ROC = {}  # rate of change
+RSI = {}  # relative strength index
+
+temp_df = stock_df.reset_index()
+stocks = temp_df['Name'].unique()
+# print(stocks)
+
 for stock in stocks:
     # print(stock)
-    try:
-        # last_price = stock_df.loc[stock, finish - timedelta(days=1)].get("Adj Close")
-        last_price = stock_df.loc[stock, finish].get("Adj Close")
-    except:
-        print("Failed to get finish price for " + stock)
-        continue
+    last_price = stock_df.loc[stock, finish].get("Adj Close")
+    first_price = stock_df.loc[stock, start].get("Adj Close")
 
-    try:
-        first_price = stock_df.loc[stock, start].get("Adj Close")
-    except:
-        print("Failed to get start price for " + stock)
-        continue
-
-    ROC[stock] = round(((last_price - first_price) / first_price) * 100, 2)
+    ROC[stock] = round( ((last_price - first_price) / first_price) * 100, 2)
 
     temp = ta.rsi(stock_df.loc[stock, :].get("Adj Close"), length=3)
     RSI[stock] = temp[finish]
 
 # print(ROC)
-# print("start:", start, " finish: ", finish)
 print("Highest Rate of Change% from start to finish:")
 output = sorted(ROC.items(), key=operator.itemgetter(1), reverse=True)
 # print(output)
