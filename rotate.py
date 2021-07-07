@@ -21,7 +21,7 @@ import yfinance as yf
 finish = datetime.datetime.combine(datetime.datetime.today(), datetime.datetime.min.time())
 #finish = datetime.datetime(2021, 7, 6)
 start = finish - timedelta(days=289)
-print("start:", start, " finish: ", finish)
+print("Requested start:", start, " finish: ", finish)
 
 # start = finish - timedelta(days=289)
 
@@ -136,7 +136,7 @@ if found_finish_day == False:
     print('Could not find a trading day for the finish day.')
     sys.exit(1)
 
-print("start:", start, " finish: ", finish)
+print("Corrected start:", start, " finish: ", finish)
 
 
 ROC = {}  # rate of change
