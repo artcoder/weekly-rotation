@@ -96,6 +96,11 @@ stock_df = stock_df.sort_index()
 #print(stock_df)
 
 
+temp_df = stock_df.reset_index()
+stocks = temp_df['Name'].unique()
+# print(stocks)
+
+
 # Correct start and finish dates so they are trading days
 trading_days = stock_df.loc[stocks[0]].index  # "Date" is part of the MultiIndex
 
@@ -131,14 +136,20 @@ print("start:", start, " finish: ", finish)
 ROC = {}  # rate of change
 RSI = {}  # relative strength index
 
-temp_df = stock_df.reset_index()
-stocks = temp_df['Name'].unique()
-# print(stocks)
 
 for stock in stocks:
     # print(stock)
-    last_price = stock_df.loc[stock, finish].get("Adj Close")
-    first_price = stock_df.loc[stock, start].get("Adj Close")
+    try:
+        last_price = stock_df.loc[stock, finish].get("Adj Close")
+    except KeyError:
+        print("Failed to get finish price for " + stock)
+        continue
+
+    try:
+        first_price = stock_df.loc[stock, start].get("Adj Close")
+    except KeyError:
+        print("Failed to get start price for " + stock)
+        continue
 
     ROC[stock] = round( ((last_price - first_price) / first_price) * 100, 2)
 
