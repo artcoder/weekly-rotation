@@ -141,11 +141,14 @@ print("Corrected start:", start, " finish: ", finish)
 
 
 ROC = {}  # rate of change
-RSI = {}  # relative strength index
+RSI = {}  # relative strength index (3 days)
+average_volume = {}
 
 
 for stock in stocks:
     # print(stock)
+
+    # Rate of change
     try:
         last_price = stock_df.loc[stock, finish].get("Adj Close")
     except KeyError:
@@ -160,8 +163,13 @@ for stock in stocks:
 
     ROC[stock] = round( ((last_price - first_price) / first_price) * 100, 2)
 
+    # Relative Strength Index (3 days)
     temp = ta.rsi(stock_df.loc[stock, :].get("Adj Close"), length=3)
     RSI[stock] = temp[finish]
+
+    # Average Volume last 20 days
+    temp = stock_df.loc[stock, :].get("Volume").rolling(window=20).mean()
+    average_volume[stock] = temp[finish]
 
 # print(ROC)
 print("Highest Rate of Change% from start to finish:")
@@ -170,7 +178,14 @@ output = sorted(ROC.items(), key=operator.itemgetter(1), reverse=True)
 
 count = 0
 for i in output:
-    print(i[0], i[1], '%', round(RSI[i[0]], 1), end=" ")
+    print(i[0], i[1], '%,', end=" ")
+    print('Vol:', average_volume[i[0]], end=" ")
+    if average_volume[i[0]] > 1000000:
+        print('OK', end=" ")
+    else:
+        print('!Low', end=" ")
+
+    print(', RSI:', round(RSI[i[0]], 1), end=" ")
     if RSI[i[0]] < 50:
         print("OK")
     else:
