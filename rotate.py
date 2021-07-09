@@ -18,9 +18,8 @@ import pandas_ta as ta
 import yfinance as yf
 
 pickle_file_needs_to_be_updated = False
-# today's date with zeroed out time
-finish = datetime.datetime.combine( datetime.datetime.today(),
-                                    datetime.datetime.min.time() )
+
+finish = datetime.date.today()
 # finish = datetime.datetime(2021, 7, 6)
 start = finish - timedelta(days=289)
 print("Requested start:", start, " finish: ", finish)
