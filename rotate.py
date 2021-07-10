@@ -16,6 +16,7 @@ import sys
 import pandas as pd
 import pandas_ta as ta
 import yfinance as yf
+import traceback
 
 pickle_file_needs_to_be_updated = False
 
@@ -34,9 +35,9 @@ print("Requested start:", start, " finish: ", finish)
 
 # You need to copy the S&P 500 companies into a CSV file
 # https://en.wikipedia.org/wiki/List_of_S%26P_500_companies
-symbols_filename = 'C:\Data\code\sp500symbols.csv'
+symbols_filename = r'C:\Data\code\sp500symbols.csv'
 
-pickle_filename = 'C:\Data\code\stock_df.pkl'
+pickle_filename = r'C:\Data\code\stock_df.pkl'
 
 extra_days = 5  # extra days to try to download in case the start date is not a trading day
 
@@ -59,26 +60,31 @@ def load_stock_data():
         stock_list.append(row[0])
 
     for stock_symbol in stock_list:
-
-        # print the symbol which is being downloaded
+         # print the symbol which is being downloaded
         print(str(stock_list.index(stock_symbol)) + str(':') + stock_symbol)
 
         try:
             # download the stock prices
             stock_data = []
+
             stock_data = yf.download(stock_symbol,
                                      start=(start - timedelta(days=extra_days)),
                                      end=(finish + timedelta(days=1)),
+                                     threads=False,
                                      progress=False)
 
-            # append the individual stock prices 
+            # append the individual stock prices
             if len(stock_data) == 0:
                 None
             else:
                 stock_data['Name'] = stock_symbol
                 stock_df = stock_df.append(stock_data, sort=False)
-        except Exception:
+
+        except Exception as e:
+            traceback.print_exc()
+            print(e)
             print("Could not download " + stock_symbol)
+
 ###
 
 
@@ -95,7 +101,6 @@ stock_df = stock_df.reset_index()
 stock_df = stock_df.drop(columns=['Open', 'High', 'Low', 'Close'])
 stock_df = stock_df.set_index(['Name', 'Date'])
 stock_df = stock_df.sort_index()
-#print(stock_df)
 
 
 temp_df = stock_df.reset_index()
