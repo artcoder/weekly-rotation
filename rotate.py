@@ -20,10 +20,10 @@ import traceback
 
 pickle_file_needs_to_be_updated = False
 
-finish = datetime.date.today()
-# finish = datetime.datetime(2021, 7, 6)
-start = finish - timedelta(days=289)
-print("Requested start:", start, " finish: ", finish)
+finish_date = datetime.date.today()
+# finish_date = datetime.datetime(2021, 7, 6)
+start_date = finish_date - timedelta(days=289)
+print("Requested start:", start_date, " finish: ", finish_date)
 
 # start = finish - timedelta(days=289)
 
@@ -60,7 +60,7 @@ def load_stock_data():
         stock_list.append(row[0])
 
     for stock_symbol in stock_list:
-         # print the symbol which is being downloaded
+        # print the symbol which is being downloaded
         print(str(stock_list.index(stock_symbol)) + str(':') + stock_symbol)
 
         try:
@@ -68,14 +68,14 @@ def load_stock_data():
             stock_data = []
 
             stock_data = yf.download(stock_symbol,
-                                     start=(start - timedelta(days=extra_days)),
-                                     end=(finish + timedelta(days=1)),
+                                     start=(start_date - timedelta(days=extra_days)),
+                                     end=(finish_date + timedelta(days=1)),
                                      threads=False,
                                      progress=False)
 
             # append the individual stock prices
             if len(stock_data) == 0:
-                None
+                print("No stock data returned for", stock_symbol)
             else:
                 stock_data['Name'] = stock_symbol
                 stock_df = stock_df.append(stock_data, sort=False)
@@ -111,14 +111,14 @@ stocks = temp_df['Name'].unique()
 # Correct start and finish dates so they are trading days
 trading_days = stock_df.loc[stocks[0]].index  # "Date" is part of the MultiIndex
 
-start_day_range = pd.date_range(start - timedelta(days=extra_days),
-                                start).tolist()
+start_day_range = pd.date_range(start_date - timedelta(days=extra_days),
+                                start_date).tolist()
 start_day_range.reverse()
 found_start_day = False
 
 for d in start_day_range:
     if d in trading_days:
-        start = d
+        start_date = d
         found_start_day = True
         break
 
@@ -127,14 +127,14 @@ if found_start_day == False:
     sys.exit(1)
 
 
-finish_day_range = pd.date_range(finish - timedelta(days=extra_days),
-                                 finish).tolist()
+finish_day_range = pd.date_range(finish_date - timedelta(days=extra_days),
+                                 finish_date).tolist()
 finish_day_range.reverse()
 found_finish_day = False
 
 for d in finish_day_range:
     if d in trading_days:
-        finish = d
+        finish_date = d
         found_finish_day = True
         break
 
@@ -142,7 +142,7 @@ if found_finish_day == False:
     print('Could not find a trading day for the finish day.')
     sys.exit(1)
 
-print("Corrected start:", start, " finish: ", finish)
+print("Corrected start:", start_date, " finish: ", finish_date)
 
 
 ROC = {}  # rate of change
@@ -155,13 +155,13 @@ for stock in stocks:
 
     # Rate of change
     try:
-        last_price = stock_df.loc[stock, finish].get("Adj Close")
+        last_price = stock_df.loc[stock, finish_date].get("Adj Close")
     except KeyError:
         print("Failed to get finish price for " + stock)
         continue
 
     try:
-        first_price = stock_df.loc[stock, start].get("Adj Close")
+        first_price = stock_df.loc[stock, start_date].get("Adj Close")
     except KeyError:
         print("Failed to get start price for " + stock)
         continue
@@ -170,11 +170,11 @@ for stock in stocks:
 
     # Relative Strength Index (3 days)
     temp = ta.rsi(stock_df.loc[stock, :].get("Adj Close"), length=3)
-    RSI[stock] = temp[finish]
+    RSI[stock] = temp[finish_date]
 
     # Average Volume last 20 days
     temp = stock_df.loc[stock, :].get("Volume").rolling(window=20).mean()
-    average_volume[stock] = temp[finish]
+    average_volume[stock] = temp[finish_date]
 
 # print(ROC)
 print("Highest Rate of Change% from start to finish:")
@@ -184,17 +184,21 @@ output = sorted(ROC.items(), key=operator.itemgetter(1), reverse=True)
 count = 0
 for i in output:
     print(i[0], i[1], '%,', end=" ")
-    print('Vol:', average_volume[i[0]], end=" ")
-    if average_volume[i[0]] > 1000000:
-        print('OK', end=" ")
-    else:
-        print('!Low', end=" ")
 
-    print(', RSI:', round(RSI[i[0]], 1), end=" ")
-    if RSI[i[0]] < 50:
-        print("OK")
+    print('Volume ', end=" ")
+    if average_volume[i[0]] > 1000000:
+        print('OK', end="")
+        count = count + 1  # only count higher volume stocks
     else:
-        print("overbought")
-    count = count + 1
+        print('!Low', end="")
+    print(':', average_volume[i[0]],  end="")
+
+    print(', RSI ', end='')
+    if RSI[i[0]] < 50:
+        print("OK:", end=" ")
+    else:
+        print("Overbought:", end=" ")
+    print(round(RSI[i[0]], 1))
+
     if count >= 10:
         break
