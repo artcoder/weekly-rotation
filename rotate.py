@@ -1,4 +1,5 @@
-# Idea from /The 30-Minute Stock Trader/ by Laurens Bensdorp
+# Python code to automate a stock trading strategy
+# from /The 30-Minute Stock Trader/ by Laurens Bensdorp
 # "Chapter 8 Weekly Rotation S&P 500 -- For the Busy or Lazy"
 #
 # The download code was based on:
@@ -18,7 +19,7 @@ import pandas_ta as ta
 import yfinance as yf
 import traceback
 
-pickle_file_needs_to_be_updated = False
+pickle_file_needs_to_be_updated = True
 
 finish_date = datetime.date.today()
 # finish_date = datetime.datetime(2021, 7, 6)
@@ -33,13 +34,13 @@ print("Requested start:", start_date, " finish: ", finish_date)
 # How many calendar days?
 # 200 * 365.25 / 253 = 289 calendar days
 
-# You need to copy the S&P 500 companies into a CSV file
+# You need to copy the S&P 500 companies into a "CSV" file. Just have every stock symbol on it's own line
 # https://en.wikipedia.org/wiki/List_of_S%26P_500_companies
 symbols_filename = r'C:\Data\code\sp500symbols.csv'
 
 pickle_filename = r'C:\Data\code\stock_df.pkl'
 
-extra_days = 5  # extra days to try to download in case the start date is not a trading day
+extra_days = 5  # extra days to try to download in case the start date or finish date is not a trading day
 
 # create empty dataframe
 stock_df = pd.DataFrame()
@@ -185,7 +186,7 @@ count = 0
 for i in output:
     print(i[0], i[1], '%,', end=" ")
 
-    print('Volume ', end=" ")
+    print('Volume ', end="")
     if average_volume[i[0]] > 1000000:
         print('OK', end="")
         count = count + 1  # only count higher volume stocks
