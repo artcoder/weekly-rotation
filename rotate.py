@@ -36,9 +36,9 @@ print("Requested start:", start_date, " finish: ", finish_date)
 
 # You need to copy the S&P 500 companies into a "CSV" file. Just have every stock symbol on it's own line
 # https://en.wikipedia.org/wiki/List_of_S%26P_500_companies
-symbols_filename = r'C:\Data\code\sp500symbols.csv'
+symbols_filename = r'.\sp500symbols.csv'
 
-pickle_filename = r'C:\Data\code\stock_df.pkl'
+pickle_filename = r'.\stock_df.pkl'
 
 extra_days = 5  # extra days to try to download in case the start date or finish date is not a trading day
 
@@ -67,10 +67,10 @@ def load_stock_data():
         try:
             # download the stock prices
             stock_data = []
-
+            # end=(finish_date + timedelta(days=1)),
             stock_data = yf.download(stock_symbol,
                                      start=(start_date - timedelta(days=extra_days)),
-                                     end=(finish_date + timedelta(days=1)),
+                                     end=finish_date,
                                      threads=False,
                                      progress=False)
 
@@ -85,7 +85,6 @@ def load_stock_data():
             traceback.print_exc()
             print(e)
             print("Could not download " + stock_symbol)
-
 ###
 
 
@@ -184,6 +183,7 @@ output = sorted(ROC.items(), key=operator.itemgetter(1), reverse=True)
 
 count = 0
 for i in output:
+    # stock symbol, rate of change%
     print(i[0], i[1], '%,', end=" ")
 
     print('Volume ', end="")
