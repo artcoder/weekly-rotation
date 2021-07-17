@@ -19,7 +19,7 @@ import pandas_ta as ta
 import yfinance as yf
 import traceback
 
-pickle_file_needs_to_be_updated = True
+pickle_file_needs_to_be_updated = False
 
 finish_date = datetime.date.today()
 # finish_date = datetime.datetime(2021, 7, 6)
@@ -181,25 +181,30 @@ print("Highest Rate of Change% from start to finish:")
 output = sorted(ROC.items(), key=operator.itemgetter(1), reverse=True)
 # print(output)
 
-count = 0
+ranking = ''
+count = 1
 for i in output:
-    # stock symbol, rate of change%
-    print(i[0], i[1], '%,', end=" ")
+    ranking = str(count)
+    stock_symbol = i[0]
+    rate_of_change = str(i[1])
+    volume_summary = ''
 
-    print('Volume ', end="")
     if average_volume[i[0]] > 1000000:
-        print('OK', end="")
+        volume_summary = 'OK'
         count = count + 1  # only count higher volume stocks
     else:
-        print('!Low', end="")
-    print(':', average_volume[i[0]],  end="")
+        volume_summary = 'Low'
+        ranking = '!'
 
-    print(', RSI ', end='')
     if RSI[i[0]] < 50:
-        print("OK:", end=" ")
+        RSI_summary = 'OK'
     else:
-        print("Overbought:", end=" ")
-    print(round(RSI[i[0]], 1))
+        RSI_summary = 'Overbought'
+        ranking = '!'
 
-    if count >= 10:
+    print(ranking + ') ' + stock_symbol + ' ' + rate_of_change + '%', end='')
+    print(' Volume ' + volume_summary + ': ' + str(average_volume[i[0]]) + ', ', end='')
+    print('RSI ' + RSI_summary + ': ' + str(round(RSI[i[0]], 1)) )
+
+    if count >= 11:
         break
