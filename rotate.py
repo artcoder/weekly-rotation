@@ -19,7 +19,7 @@ import pandas_ta as ta
 import yfinance as yf
 import traceback
 
-pickle_file_needs_to_be_updated = False
+pickle_file_needs_to_be_updated = True
 
 finish_date = datetime.date.today()
 # finish_date = datetime.datetime(2021, 7, 6)
@@ -70,7 +70,7 @@ def load_stock_data():
             # end=(finish_date + timedelta(days=1)),
             stock_data = yf.download(stock_symbol,
                                      start=(start_date - timedelta(days=extra_days)),
-                                     end=finish_date,
+                                     end=(finish_date + timedelta(days=1)),
                                      threads=False,
                                      progress=False)
 
