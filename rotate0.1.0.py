@@ -93,7 +93,7 @@ def download_stock_data(download_start_date, download_finish_date):
                        auto_adjust=True)
 
     t_df = data.stack(level=0).rename_axis(['Date', 'Ticker']).reset_index(level=1)
-    t_df = t.reset_index()
+    t_df = t_df.reset_index()
 
     # insert dataframe data into database
     t_df.to_sql('stock_data', con, if_exists='append', index=False)
@@ -114,7 +114,8 @@ sql = '''
 Select * From stock_data
 Where Date >= ? and Date <= ?
 '''
-cur.execute(sql, start_date, finish_date)
+cur.execute(sql,
+            [start_date, finish_date])
 
 ticker_df = pd.DataFrame(cur.fetchall(),
                          columns=['date', 'ticker', 'open', 'high', 'low', 'close', 'volume'])
