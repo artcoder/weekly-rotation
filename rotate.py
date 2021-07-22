@@ -27,7 +27,6 @@ start_date = finish_date - timedelta(days=289)
 print("Requested start:", start_date, " finish: ", finish_date)
 
 # start = finish - timedelta(days=289)
-
 # 253 trading days in a year
 # 365.25 days in a year
 # 200 trading days to look at
