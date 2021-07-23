@@ -76,7 +76,7 @@ def find_download_start_date(requested_start_date):
         download_start_date = requested_start_date
     else:
         print('Found', rows[0][0], 'in database.')
-        download_start_date = rows[0][0]
+        download_start_date = rows[0][0].date()
 
     return download_start_date
 
@@ -126,14 +126,12 @@ def download_stock_data(download_start_date, download_finish_date):
             print("Failed inserting:", str(t_df.iloc[i][0]), t_df.iloc[i][1], end="\r")
 
     con.commit()
-
-
 #
 
 
 con = sqlite3.connect(database_filename,
                       detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES)
-# for timestamp support
+                      # for timestamp support
 cur = con.cursor()
 
 # print("in main:", start_date, type(start_date))
@@ -141,10 +139,10 @@ download_start_date = find_download_start_date(start_date)
 
 download_finish_date = finish_date
 
-# Check if download_start_date = download_finish_date:
-#    skip download
-# else:
-download_stock_data(download_start_date, download_finish_date)
+if download_start_date < download_finish_date:
+    download_stock_data(download_start_date, download_finish_date)
+else:
+    print("Not downloading")
 
 # Load requested date range from db
 sql = '''
