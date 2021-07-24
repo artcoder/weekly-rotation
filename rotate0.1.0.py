@@ -37,7 +37,7 @@ print("Requested start:", start_date, "finish:", finish_date)
 # How many calendar days?
 # 200 * 365.25 / 253 = 289 calendar days
 
-extra_days = 0 # 5  # extra days to try to download in case the start date or finish date is not a trading day
+extra_days = 0  # 5  # extra days to try to download in case the start date or finish date is not a trading day
 
 
 def find_download_start_date(requested_start_date):
@@ -75,8 +75,9 @@ def find_download_start_date(requested_start_date):
         print('No rows found in database.')
         download_start_date = requested_start_date
     else:
-        print('Found', rows[0][0], 'in database.')
-        download_start_date = rows[0][0].date()
+        print('Last date found in database:', rows[0][0])
+        # Download the day after the one in the database
+        download_start_date = rows[0][0].date() + timedelta(days=1)
 
     return download_start_date
 
@@ -84,7 +85,7 @@ def find_download_start_date(requested_start_date):
 def download_stock_data(download_start_date, download_finish_date):
     global con
 
-    print(" download_stock_data: start date:", download_start_date, "finish date:", download_finish_date)
+    print("Download_stock_data: start date:", download_start_date, "finish date:", download_finish_date)
     stock_list = []
     csvfile = open(symbols_filename, newline='')
     reader = csv.reader(csvfile)
@@ -131,7 +132,7 @@ def download_stock_data(download_start_date, download_finish_date):
 
 con = sqlite3.connect(database_filename,
                       detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES)
-                      # for timestamp support
+# for timestamp support
 cur = con.cursor()
 
 # print("in main:", start_date, type(start_date))
