@@ -115,13 +115,14 @@ def download_stock_data(download_start_date, download_finish_date):
     # print(t_df)
     # t_df.to_sql('stock_data', con, if_exists='append', index=False)
 
+    print('Inserting data into database...')
     for i in range(len(t_df)):
         sql = 'insert into stock_data (date, ticker, close, high, low, open, volume) ' \
               'values (?,?,?,?,?,?,?)'
         try:
             cur.execute(sql, (t_df.iloc[i].get('Date').to_pydatetime(),
                               t_df.iloc[i].get('Ticker'),
-                              t_df.iloc[i].get('Close'),
+                              t_df.iloc[i].get('Adj Close'),
                               t_df.iloc[i].get('High'),
                               t_df.iloc[i].get('Low'),
                               t_df.iloc[i].get('Open'),
