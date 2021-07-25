@@ -6,26 +6,30 @@
 # https://towardsdatascience.com/downloading-historical-stock-prices-in-python-93f85f059c1f
 ###
 # David Guilbeau
-# Version 0.0.0
+# Version 0.1.0
 
 import csv
 import datetime
-import operator
-import pickle
 from datetime import timedelta
+import operator
 import sys
-
 import pandas as pd
 import pandas_ta as ta
 import yfinance as yf
+import sqlite3
 import traceback
+import pickle
 
-pickle_file_needs_to_be_updated = False
+database_filename = 'stock_data.sqlite3'
+symbols_filename = r'C:\Data\code\sp500symbols.csv'
+pickle_filename = r'.\stock_df_0.1.0.pkl'
+download = False
 
+# Set requested date range
 finish_date = datetime.date.today()
 # finish_date = datetime.datetime(2021, 7, 6)
 start_date = finish_date - timedelta(days=289)
-print("Requested start:", start_date, " finish: ", finish_date)
+print("Requested start:", start_date, "finish:", finish_date)
 
 # start = finish - timedelta(days=289)
 # 253 trading days in a year
@@ -34,78 +38,161 @@ print("Requested start:", start_date, " finish: ", finish_date)
 # How many calendar days?
 # 200 * 365.25 / 253 = 289 calendar days
 
-# You need to copy the S&P 500 companies into a "CSV" file. Just have every stock symbol on it's own line
-# https://en.wikipedia.org/wiki/List_of_S%26P_500_companies
-symbols_filename = r'.\sp500symbols.csv'
-
-pickle_filename = r'.\stock_df.pkl'
-
-extra_days = 5  # extra days to try to download in case the start date or finish date is not a trading day
-
-# create empty dataframe
-stock_df = pd.DataFrame()
+extra_days = 5  # extra days to try to download in case the start date is not a trading day
 
 
-# Using yfinance, download stock data on the stock symbols in symbols_filename
-#  over the period start to end to the dataframe stock_df
-def load_stock_data():
+def find_download_start_date(requested_start_date):
+    global con
+    # print("In find_download_start_date:", requested_start_date, type(requested_start_date))
+    cur = con.cursor()
 
-    global stock_df
+    # If table does not exist, create it
+    sql = '''
+    CREATE TABLE  IF NOT EXISTS stock_data
+    (date timestamp NOT NULL,
+    ticker text NOT NULL,
+    open real,
+    high real,
+    low real,
+    close real,
+    volume real,
+    primary key(date, ticker)
+    )
+    '''
+    cur.execute(sql)
 
+    # Find the last date in the db:
+    sql = '''
+    Select date From stock_data
+    Order By date Desc
+    Limit 1
+    '''
+
+    cur.execute(sql)
+    rows = cur.fetchall()
+
+    # if no date
+    if len(rows) < 1:
+        print('No rows found in database table.')
+        download_start_date = requested_start_date
+    else:
+        print('Last date found in database:', rows[0][0])
+        # Download the day after the one in the database
+        download_start_date = rows[0][0].date() + timedelta(days=1)
+
+    return download_start_date
+
+
+def download_stock_data(download_start_date, download_finish_date):
+    global con
+
+    print("Download_stock_data: start date:", download_start_date, "finish date:", download_finish_date)
     stock_list = []
-
     csvfile = open(symbols_filename, newline='')
     reader = csv.reader(csvfile)
 
     for row in reader:
         stock_list.append(row[0])
 
-    for stock_symbol in stock_list:
-        # print the symbol which is being downloaded
-        print(str(stock_list.index(stock_symbol)) + str(':') + stock_symbol)
+    if download:
+        data = yf.download(stock_list,
+                           # start = download_start_date,
+                           # end = download_finish_date,
+                           start=(download_start_date - timedelta(days=extra_days)),
+                           end=(download_finish_date + timedelta(days=1)),
+                           group_by='ticker')
 
+        data.to_pickle(pickle_filename)
+    else:
+        pickle_file = open(pickle_filename, 'rb')
+        data = pickle.load(pickle_file)
+
+    # https://stackoverflow.com/questions/63107594/how-to-deal-with-multi-level-column-names-downloaded-with-yfinance/63107801#63107801
+    t_df = data.stack(level=0).rename_axis(['Date', 'Ticker']).reset_index(level=1)
+    t_df = t_df.reset_index()
+
+    # insert dataframe data into database, but it fails if the date and ticker already exists
+    # print(t_df)
+    # t_df.to_sql('stock_data', con, if_exists='append', index=False)
+
+    for i in range(len(t_df)):
+        sql = 'insert into stock_data (date, ticker, close, high, low, open, volume) ' \
+              'values (?,?,?,?,?,?,?)'
         try:
-            # download the stock prices
-            stock_data = []
-            # end=(finish_date + timedelta(days=1)),
-            stock_data = yf.download(stock_symbol,
-                                     start=(start_date - timedelta(days=extra_days)),
-                                     end=(finish_date + timedelta(days=1)),
-                                     threads=False,
-                                     progress=False)
+            cur.execute(sql, (t_df.iloc[i].get('Date').to_pydatetime(),
+                              t_df.iloc[i].get('Ticker'),
+                              t_df.iloc[i].get('Close'),
+                              t_df.iloc[i].get('High'),
+                              t_df.iloc[i].get('Low'),
+                              t_df.iloc[i].get('Open'),
+                              t_df.iloc[i].get('Volume') ))
+        except sqlite3.IntegrityError:
+            print("Failed inserting:", str(t_df.iloc[i][0]), t_df.iloc[i][1], end="\r")
 
-            # append the individual stock prices
-            if len(stock_data) == 0:
-                print("No stock data returned for", stock_symbol)
-            else:
-                stock_data['Name'] = stock_symbol
-                stock_df = stock_df.append(stock_data, sort=False)
-
-        except Exception as e:
-            traceback.print_exc()
-            print(e)
-            print("Could not download " + stock_symbol)
-###
+    con.commit()
+#
 
 
-if pickle_file_needs_to_be_updated:
-    load_stock_data()
-    stock_df.to_pickle(pickle_filename)
+# detect_types is for timestamp support
+con = sqlite3.connect(database_filename,
+                      detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES)
+cur = con.cursor()
+
+# print("in main:", start_date, type(start_date))
+download_start_date = find_download_start_date(start_date)
+
+download_finish_date = finish_date
+
+if download_start_date < download_finish_date:
+    download_stock_data(download_start_date, download_finish_date)
 else:
-    pickle_file = open(pickle_filename, 'rb')
-    stock_df = pickle.load(pickle_file)
+    print("Not downloading")
 
+# Load requested date range from the database
+sql = '''
+Select * From stock_data
+Where Date >= ? and Date <= ?
+'''
+cur.execute(sql,
+            [start_date, finish_date])
 
-stock_df = stock_df.reset_index()
-# Just need "Adj Close", and "Volume", so drop the other columns
-stock_df = stock_df.drop(columns=['Open', 'High', 'Low', 'Close'])
-stock_df = stock_df.set_index(['Name', 'Date'])
-stock_df = stock_df.sort_index()
+stock_df = pd.DataFrame(cur.fetchall(),
+                        columns=['date', 'ticker', 'open', 'high', 'low', 'close', 'volume'])
+stock_df = stock_df.set_index(['ticker', 'date'])
 
+# Find actual start date
+query = '''
+select date from stock_data
+order by date
+limit 1
+'''
+cur.execute(query)
+t = cur.fetchone()
+print("Database start date:", t[0])
 
-temp_df = stock_df.reset_index()
-stocks = temp_df['Name'].unique()
-# print(stocks)
+# Find actual finish date
+query = '''
+Select date From stock_data
+Order By date Desc
+limit 1
+'''
+cur.execute(query)
+t = cur.fetchone()
+print("Database finish date:", t[0])
+
+# Make a list of the stocks in the database
+query = '''
+SELECT DISTINCT ticker
+FROM stock_data
+'''
+cur.execute(query)
+t = cur.fetchall()
+
+stocks = []
+for stock in t:
+    stocks.append(stock[0])
+
+con.close()
 
 
 # Correct start and finish dates so they are trading days
@@ -144,24 +231,23 @@ if found_finish_day == False:
 
 print("Corrected start:", start_date, " finish: ", finish_date)
 
-
+# Calculate indicators
 ROC = {}  # rate of change
 RSI = {}  # relative strength index (3 days)
 average_volume = {}
-
 
 for stock in stocks:
     # print(stock)
 
     # Rate of change
     try:
-        last_price = stock_df.loc[stock, finish_date].get("Adj Close")
+        last_price = stock_df.loc[stock, finish_date].get("close")
     except KeyError:
         print("Failed to get finish price for " + stock)
         continue
 
     try:
-        first_price = stock_df.loc[stock, start_date].get("Adj Close")
+        first_price = stock_df.loc[stock, start_date].get("close")
     except KeyError:
         print("Failed to get start price for " + stock)
         continue
@@ -169,11 +255,11 @@ for stock in stocks:
     ROC[stock] = round(((last_price - first_price) / first_price) * 100, 2)
 
     # Relative Strength Index (3 days)
-    temp = ta.rsi(stock_df.loc[stock, :].get("Adj Close"), length=3)
+    temp = ta.rsi(stock_df.loc[stock, :].get("close"), length=3)
     RSI[stock] = temp[finish_date]
 
     # Average Volume last 20 days
-    temp = stock_df.loc[stock, :].get("Volume").rolling(window=20).mean()
+    temp = stock_df.loc[stock, :].get("volume").rolling(window=20).mean()
     average_volume[stock] = temp[finish_date]
 
 # print(ROC)
@@ -189,22 +275,22 @@ for i in output:
     rate_of_change = str(i[1])
     volume_summary = ''
 
-    if average_volume[i[0]] > 1000000:
-        volume_summary = 'OK'
-        count = count + 1  # only count higher volume stocks
-    else:
-        volume_summary = 'Low'
-        ranking = '!'
-
     if RSI[i[0]] < 50:
         RSI_summary = 'OK'
     else:
         RSI_summary = 'Overbought'
         ranking = '!'
 
+    if average_volume[i[0]] > 1000000:
+        volume_summary = 'OK'
+        count = count + 1  # only count higher volume stocks
+    else:
+        volume_summary = 'Low'
+        ranking = 'X'
+
     print(ranking + ') ' + stock_symbol + ' ' + rate_of_change + '%', end='')
     print(' Volume ' + volume_summary + ': ' + str(average_volume[i[0]]) + ', ', end='')
-    print('RSI ' + RSI_summary + ': ' + str(round(RSI[i[0]], 1)) )
+    print('RSI ' + RSI_summary + ': ' + str(round(RSI[i[0]], 1)))
 
     if count >= 11:
         break
