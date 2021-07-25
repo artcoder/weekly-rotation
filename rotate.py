@@ -6,6 +6,7 @@
 # https://towardsdatascience.com/downloading-historical-stock-prices-in-python-93f85f059c1f
 ###
 # David Guilbeau
+# Version 0.0.0
 
 import csv
 import datetime
@@ -19,7 +20,7 @@ import pandas_ta as ta
 import yfinance as yf
 import traceback
 
-pickle_file_needs_to_be_updated = True
+pickle_file_needs_to_be_updated = False
 
 finish_date = datetime.date.today()
 # finish_date = datetime.datetime(2021, 7, 6)
@@ -165,7 +166,7 @@ for stock in stocks:
         print("Failed to get start price for " + stock)
         continue
 
-    ROC[stock] = round( ((last_price - first_price) / first_price) * 100, 2)
+    ROC[stock] = round(((last_price - first_price) / first_price) * 100, 2)
 
     # Relative Strength Index (3 days)
     temp = ta.rsi(stock_df.loc[stock, :].get("Adj Close"), length=3)
