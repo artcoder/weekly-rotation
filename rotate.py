@@ -2,8 +2,6 @@
 # from /The 30-Minute Stock Trader/ by Laurens Bensdorp
 # "Chapter 8 Weekly Rotation S&P 500 -- For the Busy or Lazy"
 #
-# The download code was based on:
-# https://towardsdatascience.com/downloading-historical-stock-prices-in-python-93f85f059c1f
 ###
 # David Guilbeau
 # Version 0.1.0
@@ -21,7 +19,7 @@ import traceback
 import pickle
 
 database_filename = 'stock_data.sqlite3'
-symbols_filename = r'C:\Data\code\sp500symbols.csv'
+symbols_filename = r'.\sp500symbols.csv'
 pickle_filename = r'.\stock_df_0.1.0.pkl'
 download = False
 
@@ -61,13 +59,12 @@ def find_download_start_date(requested_start_date):
     '''
     cur.execute(sql)
 
-    # Find the last date in the db:
+    # Find the last date in the database:
     sql = '''
     Select date From stock_data
     Order By date Desc
     Limit 1
     '''
-
     cur.execute(sql)
     rows = cur.fetchall()
 
@@ -85,14 +82,7 @@ def find_download_start_date(requested_start_date):
 
 def download_stock_data(download_start_date, download_finish_date):
     global con
-
-    print("Download_stock_data: start date:", download_start_date, "finish date:", download_finish_date)
-    stock_list = []
-    csvfile = open(symbols_filename, newline='')
-    reader = csv.reader(csvfile)
-
-    for row in reader:
-        stock_list.append(row[0])
+    global stock_list
 
     if download:
         data = yf.download(stock_list,
@@ -132,6 +122,14 @@ def download_stock_data(download_start_date, download_finish_date):
 
     con.commit()
 #
+
+
+stock_list = []
+csvfile = open(symbols_filename, newline='')
+reader = csv.reader(csvfile)
+
+for row in reader:
+    stock_list.append(row[0])
 
 
 # detect_types is for timestamp support
@@ -189,6 +187,7 @@ FROM stock_data
 cur.execute(query)
 t = cur.fetchall()
 
+# duplicate of stock_list
 stocks = []
 for stock in t:
     stocks.append(stock[0])
@@ -232,12 +231,13 @@ if found_finish_day == False:
 
 print("Corrected start:", start_date, " finish: ", finish_date)
 
+
 # Calculate indicators
 ROC = {}  # rate of change
 RSI = {}  # relative strength index (3 days)
 average_volume = {}
 
-for stock in stocks:
+for stock in stock_list:
     # print(stock)
 
     # Rate of change
