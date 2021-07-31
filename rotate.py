@@ -21,7 +21,7 @@ import pickle
 database_filename = 'stock_data.sqlite3'
 symbols_filename = r'.\sp500symbols.csv'
 pickle_filename = r'.\stock_df_0.1.0.pkl'
-download = False
+download = True
 
 # Set requested date range
 finish_date = datetime.date.today()
@@ -152,12 +152,15 @@ sql = '''
 Select * From stock_data
 Where Date >= ? and Date <= ?
 '''
+# print('for sql, finish_date:', finish_date)
+
 cur.execute(sql,
-            [start_date, finish_date])
+            [start_date - timedelta(days=extra_days), finish_date + timedelta(days=1)])
 
 stock_df = pd.DataFrame(cur.fetchall(),
                         columns=['date', 'ticker', 'open', 'high', 'low', 'close', 'volume'])
 stock_df = stock_df.set_index(['ticker', 'date'])
+# print('stock_df:', stock_df)
 
 # Find actual start date
 query = '''
@@ -197,6 +200,7 @@ con.close()
 
 # Correct start and finish dates so they are trading days
 trading_days = stock_df.loc[stocks[0]].index  # "Date" is part of the MultiIndex
+# print('trading_days:', trading_days)
 
 start_day_range = pd.date_range(start_date - timedelta(days=extra_days),
                                 start_date).tolist()
@@ -217,9 +221,11 @@ if found_start_day == False:
 finish_day_range = pd.date_range(finish_date - timedelta(days=extra_days),
                                  finish_date).tolist()
 finish_day_range.reverse()
+#  print('finish_day_range:', finish_day_range)
 found_finish_day = False
 
 for d in finish_day_range:
+    # print('d:', d, type(d))
     if d in trading_days:
         finish_date = d
         found_finish_day = True
