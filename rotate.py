@@ -1,6 +1,7 @@
 # Python code to automate a stock trading strategy
 # from /The 30-Minute Stock Trader/ by Laurens Bensdorp
 # "Chapter 8 Weekly Rotation S&P 500 -- For the Busy or Lazy"
+# It doesn't check if the S&P 500 is above its 200 day moving average.
 #
 ###
 # David Guilbeau
@@ -25,7 +26,7 @@ download = True
 
 # Set requested date range
 finish_date = datetime.date.today()
-# finish_date = datetime.datetime(2021, 7, 6)
+# finish_date = datetime.date(2021, 7, 30)
 start_date = finish_date - timedelta(days=289)
 print("Requested start:", start_date, "finish:", finish_date)
 
@@ -160,7 +161,10 @@ cur.execute(sql,
 stock_df = pd.DataFrame(cur.fetchall(),
                         columns=['date', 'ticker', 'open', 'high', 'low', 'close', 'volume'])
 stock_df = stock_df.set_index(['ticker', 'date'])
-# print('stock_df:', stock_df)
+
+print('stock_df:', stock_df.loc['A'])
+print('length of stock_df:', len(stock_df.loc['A']))
+
 
 # Find actual start date
 query = '''
